@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Internship-2-C-Sharp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bf352be5697264d9ef81c4acf86d7405f0efd13b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d9b9c9c4296ecddaf2267eda4ba7f6c41f99b23a")]
 [assembly: System.Reflection.AssemblyProductAttribute("Internship-2-C-Sharp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Internship-2-C-Sharp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

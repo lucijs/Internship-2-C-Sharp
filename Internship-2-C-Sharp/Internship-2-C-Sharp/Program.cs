@@ -385,24 +385,11 @@ static Dictionary<string, DateTime> ChangingTheWorkers(Dictionary<string, (int K
 {
     Console.WriteLine("a. imene i prezimene radnika\nb. datumu rođenja radnika\n0 povratak na glavni izbornik");
     var initial = Console.ReadLine();
-    Console.WriteLine($"Navedite ime i prezime radnika kojeg želite izmijenit");
-    var radnik = GettingTheName("ime i prezime");
-    if (!Workers.ContainsKey(radnik))
-    {
-        Console.WriteLine($"{radnik} ne postoji. Pokusajte ponovno.");
-        ChangingTheWorkers(Articles, Workers, Reciepts);
-    }
-    Console.WriteLine($"Ako želite izmijeniti podatke radnika {radnik} unesite DA");
-    if (Console.ReadLine().Trim().ToLower() != "da")
-    {
-        Console.Clear();
-        InitialPageForWorkers(Articles, Workers, Reciepts);
-    }
     switch (initial)
     {
         case "a":
             Console.Clear();
-            Console.WriteLine("Unesite novo ime i prezime");
+            var radnik = WorkerWeWantToChange(Articles, Workers, Reciepts);
             var ime = GettingTheName("novo ime i prezime");
             if (Workers.ContainsKey(ime))
             {
@@ -421,15 +408,13 @@ static Dictionary<string, DateTime> ChangingTheWorkers(Dictionary<string, (int K
             return Workers;
         case "b":
             Console.Clear();
-            Console.WriteLine("Unesite novi datum, more biti oblika yyyy-mm-dd");
-
-            DateTime novoVrijeme = Workers[radnik];
-            DateTime.TryParse(Console.ReadLine(), out novoVrijeme);
-            if (novoVrijeme != Workers[radnik])
+            var radnik2 = WorkerWeWantToChange(Articles, Workers, Reciepts);
+            var novoVrijeme = GetADate("yyyy-mm-dd");
+            if (novoVrijeme != Workers[radnik2])
             {
-                Console.WriteLine($"Ako želite promijeniti datum rođenja radnika s {Workers[radnik].ToString()} na {novoVrijeme.ToString()} unesite DA");
+                Console.WriteLine($"Ako želite promijeniti datum rođenja radnika s {Workers[radnik2].ToString()} na {novoVrijeme.ToString()} unesite DA");
                 if (Console.ReadLine().Trim().ToLower() == "da")
-                    Workers[radnik] = novoVrijeme;
+                    Workers[radnik2] = novoVrijeme;
             }
             return Workers;
         case "0":
@@ -443,6 +428,24 @@ static Dictionary<string, DateTime> ChangingTheWorkers(Dictionary<string, (int K
             break;
     }
     return Workers;
+}
+static string WorkerWeWantToChange(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    var radnik = GettingTheName("ime i prezime radnika čije podatke želimo izmijeniti");
+    if (!Workers.ContainsKey(radnik))
+    {
+        Console.WriteLine($"{radnik} ne postoji. Pokusajte ponovno.");
+        Console.ReadKey();
+        Console.Clear();
+        ChangingTheWorkers(Articles, Workers, Reciepts);
+    }
+    Console.WriteLine($"Ako želite izmijeniti podatke radnika {radnik} unesite DA");
+    if (Console.ReadLine().Trim().ToLower() != "da")
+    {
+        Console.Clear();
+        InitialPageForWorkers(Articles, Workers, Reciepts);
+    }
+    return radnik;
 }
 static List<string> DeletingWorkers(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
 {
@@ -461,6 +464,7 @@ static List<string> DeletingWorkers(Dictionary<string, (int Kolicina, double Cij
             {
                 Console.Clear();
                 Console.WriteLine("Uneseni radnik ne postoji. Pokusajte ponovno");
+                Console.ReadKey();
                 DeletingWorkers(Articles, Workers, Reciepts);
             }
             return list;
@@ -484,7 +488,7 @@ static List<string> WorkersOlderThen65(Dictionary<string, DateTime> Workers)
     var list = new List<string>();
     foreach (var item in Workers)
     {
-        if (item.Value.Subtract(DateTime.Now).TotalDays>65*365)
+        if (item.Value.Subtract(DateTime.Now).TotalDays<-65*365)
             list.Add(item.Key);
     }
     return list;
@@ -781,13 +785,15 @@ static string GettingTheName(string rijec)
 static int GettingTheNumber(string rj)
 {
     int kolicina;
-    var provjera = true;
+    var provjera = false;
     do
     {
         Console.WriteLine($"{rj}: ");
         provjera = int.TryParse(Console.ReadLine(), out kolicina);
+        if (kolicina < 0)
+            provjera = false;
     }
-    while (!provjera && kolicina>0);
+    while (!provjera);
     return kolicina;
 }
 static DateTime GetADate(string ric)
@@ -810,8 +816,10 @@ static double GetADouble(string ric)
     {
         Console.WriteLine($"{ric}: ");
         provjera = double.TryParse(Console.ReadLine(), out kolicina);
+        if (kolicina < 0)
+            provjera = false;
     }
-    while (!provjera && kolicina>0);
+    while (!provjera);
     return kolicina;
 }
 static void ArticlesListing(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
