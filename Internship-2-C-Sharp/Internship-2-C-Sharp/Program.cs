@@ -1,4 +1,7 @@
-﻿var Artikli = new Dictionary<string , (int Kolicina, double Cijena, DateTime DatumIsteka)>()
+﻿using System.Collections.Immutable;
+using System.Diagnostics;
+
+var Artikli = new Dictionary<string , (int Kolicina, double Cijena, DateTime DatumIsteka)>()
 {
     {"Jabuka", (10,7, new DateTime(2024, 11, 15))},
     {"Oreo", (23,10, new DateTime(2025,01,01)) },
@@ -15,7 +18,7 @@ var Radnici = new Dictionary<string, DateTime>() {
 
 var Racuni = new Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)>() {
     {1234, (new DateTime(2023,11,17),new Dictionary<string, double>() {{"Jabuka", 14},{"Oreo",30 } }) },
-    {1235, (new DateTime(2023,10,05),new Dictionary<string, double>() {{"LinoLada", 14},{"Oreo",50 } }) }
+    {1235, (new DateTime(2023,10,05),new Dictionary<string, double>() {{"LinoLada", 90},{"Oreo",50 } }) }
 
 };
 
@@ -89,7 +92,7 @@ static void InitialPageForArticles(Dictionary<string, (int Kolicina, double Cije
 
 static void ArticlesListing(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
 {
-    Console.WriteLine("a. ispis svih artikla\nb. ispis svih artikla sortirano po imenu\nc. ispis svih artikla sortirano po datumu silazno\nd. ispis svih artikla sortirano po datumu uzlazno\ne. svih artikala sortirano po količini\nf.najprodavaniji artikli\ng.najmanje prodavani artikli");
+    Console.WriteLine("a. ispis svih artikla\nb. ispis svih artikla sortirano po imenu\nc. ispis svih artikla sortirano po datumu silazno\nd. ispis svih artikla sortirano po datumu uzlazno\ne. svih artikala sortirano po količini\nf. najprodavaniji artikli\ng. najmanje prodavani artikli\n0 povratak na glavni izbornik");
     var chosenSign = Console.ReadLine().ToLower();
     switch (chosenSign)
     {
@@ -110,10 +113,13 @@ static void ArticlesListing(Dictionary<string, (int Kolicina, double Cijena, Dat
             ListOutTheArticlesUsingDates(listOfDates, Articles);
             break;
         case "e":
+            ListOutTheArticlesUsingAmount(MakeAmountList(Articles), Articles);
             break;
         case "f":
+            BestSeller(SoldPieces(Articles, Reciepts), Articles);
             break;
         case "g":
+            WorstSeller(SoldPieces(Articles, Reciepts), Articles);
             break;
         case "0":
             BeginningPage(Articles, Workers, Reciepts);
@@ -124,7 +130,76 @@ static void ArticlesListing(Dictionary<string, (int Kolicina, double Cijena, Dat
             break;
     }
 }
+static void WorstSeller(Dictionary<string, double> list, Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles)
+{
+    var proizvod = "";
+    var min = 0.0;
+    foreach (var item in list)
+    {
+        if (min > item.Value || min == 0)
+        {
+            min = item.Value;
+            proizvod = item.Key;
+        }
+    }
+    Console.WriteLine($"{proizvod}({Articles[proizvod].Kolicina}) - {Articles[proizvod].Cijena} - {(Math.Round(Articles[proizvod].DatumIsteka.Subtract(DateTime.Now).TotalDays, 2) > 0 ? "do isteka " + Math.Round(Articles[proizvod].DatumIsteka.Subtract(DateTime.Now).TotalDays, 2) : "od isteka " + Math.Abs(Math.Round(Articles[proizvod].DatumIsteka.Subtract(DateTime.Now).TotalDays, 2)))} - prodano ih je {min}");
+    return;
+}
+static void BestSeller(Dictionary<string, double> list, Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles)
+{
+    var (proizvod,max) = ("",0.0);
+    foreach (var item in list)
+    {
+        if (max < item.Value)
+        {
+            max = item.Value;
+            proizvod = item.Key;
+        }
+    }
+    Console.WriteLine($"{proizvod}({Articles[proizvod].Kolicina}) - {Articles[proizvod].Cijena} - {(Math.Round(Articles[proizvod].DatumIsteka.Subtract(DateTime.Now).TotalDays, 2) > 0 ? "do isteka " + Math.Round(Articles[proizvod].DatumIsteka.Subtract(DateTime.Now).TotalDays, 2) : "od isteka " + Math.Abs(Math.Round(Articles[proizvod].DatumIsteka.Subtract(DateTime.Now).TotalDays, 2)))} - prodano ih je {max}");
+    return;
+}
+static Dictionary<string, double> SoldPieces(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    var list = new Dictionary<string, double>();
+    foreach (var reciept in Reciepts)
+    {
+        foreach (var item in reciept.Value.SviProizvodi)
+        {
+            if (list.ContainsKey(item.Key))
+                list[item.Key] += item.Value / Articles[item.Key].Cijena;
+            else
+                list.Add(item.Key, item.Value / Articles[item.Key].Cijena);
+        }
+    }
+    return list;
+}
+static List<int> MakeAmountList(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles)
+{
+    var list = new List<int>();
 
+    foreach (var article in Articles)
+    {
+        list.Add(article.Value.Kolicina);
+    }
+    list.Sort();
+    list.Reverse();
+    return list;
+}
+static void ListOutTheArticlesUsingAmount(List<int> listOfAmounts, Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles)
+{
+    foreach (var amount in listOfAmounts)
+    {
+        foreach (var proizvod in Articles)
+        {
+            if (proizvod.Value.Kolicina == amount)
+            {
+                Console.WriteLine($"{proizvod.Key}({proizvod.Value.Kolicina}) - {proizvod.Value.Cijena} - {(Math.Round(proizvod.Value.DatumIsteka.Subtract(DateTime.Now).TotalDays, 2) > 0 ? "do isteka " + Math.Round(proizvod.Value.DatumIsteka.Subtract(DateTime.Now).TotalDays, 2) : "od isteka " + Math.Abs(Math.Round(proizvod.Value.DatumIsteka.Subtract(DateTime.Now).TotalDays, 2)))}");
+                break;
+            }
+        }
+    }
+}
 static List<string> MakeArticleList(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles)
 {
     var listaArtikla = new List<string>();
@@ -145,6 +220,7 @@ static List<DateTime> MakeDatesList(Dictionary<string, (int Kolicina, double Cij
     listaDatuma.Sort();
     return listaDatuma;
 }
+
 static void ListOutTheArticles(List<string> Articles, Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Artikli)
 {
     foreach (var proizvod in Articles)
