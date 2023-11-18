@@ -24,7 +24,7 @@ var Racuni = new Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, do
 };
 
 BeginningPage(Artikli, Radnici, Racuni);
-static void BeginningPage(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts  )
+static void BeginningPage(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
 {
     Console.WriteLine("1 - Artikli\n2 - Radnici\n3 - Racuni\n4 - Statistika\n0 - Izlaz iz aplikacije");
 
@@ -49,11 +49,15 @@ static void BeginningPage(Dictionary<string, (int Kolicina, double Cijena, DateT
             break;
 
         case "3":
-            Console.WriteLine("racuni");
+            Console.Clear();
+            (Reciepts, Articles) = InitialPageForReciepts(Articles, Workers, Reciepts);
+            Console.Clear();
+            BeginningPage(Articles, Workers, Reciepts);
             break;
 
         case "4":
-            Console.WriteLine("statistika");
+            Console.Clear();
+            InitialPageForStatistics(Articles, Workers, Reciepts);
             break;
 
         default:
@@ -62,6 +66,223 @@ static void BeginningPage(Dictionary<string, (int Kolicina, double Cijena, DateT
             BeginningPage(Articles, Workers, Reciepts);
             break;
     }
+}
+static void InitialPageForStatistics(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    Console.WriteLine("1 - Ukupan broj artikala u trgovini\n2 - Vrijednost artikala koji nisu još prodani\n3 - Vrijednost svih artikala koji su prodani \n4 - Stanje po mjesecima\n0 - Izlaz iz aplikacije");
+
+    var initialNumber = Console.ReadLine();
+
+    switch (initialNumber)
+    {
+        case "0":
+            Console.Clear();
+            BeginningPage(Articles, Workers, Reciepts);
+            break;
+        case "1":
+            Console.Clear();
+            Console.WriteLine($"Broj artikala u trgovini je {MakeArticleList(Articles).Count}");
+            Console.ReadKey();
+            Console.Clear();
+            BeginningPage(Articles, Workers, Reciepts);
+            break;
+        case "2":
+            Console.Clear();
+            Console.WriteLine($"Vrijednost neprodanih artikala je  {UnsoldArticles(Articles)}");
+            Console.ReadKey();
+            Console.Clear();
+            BeginningPage(Articles, Workers, Reciepts);
+            break;
+        case "3":
+            Console.Clear();
+            Console.WriteLine($"Vrijednost prodanih artikala je  {SoldArticles(Reciepts)}");
+            Console.ReadKey();
+            Console.Clear();
+            BeginningPage(Articles, Workers, Reciepts);
+            break;
+        case "4":
+            TotalEarnings(Articles, Workers, Reciepts);
+            Console.ReadKey();
+            Console.Clear();
+            BeginningPage(Articles, Workers, Reciepts);
+            break;
+
+        default:
+            Console.Clear();
+            Console.WriteLine("Upisani broj nije jedan od ponudenih. Pokusajte ponovno.");
+            InitialPageForStatistics(Articles, Workers, Reciepts);
+            break;
+    }
+
+}
+static void TotalEarnings(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    Console.Clear();
+    Console.WriteLine("Unesite godinu i mjesec koji zelite provjeriti");
+    var datum = GetADate("yyyy-mm");
+    var place = 0.0;
+    foreach (var item in MakeWorkersList(Workers))
+        place += GetADouble($"{item} plaća:");
+    var najam = GetADouble("Iznos cijene najma:");
+    var ostaliTroskovi = GetADouble("Iznos preostalih troskova:");
+    var vrijednost = Earnings(datum, Reciepts) * 1 / 3 - place - najam - ostaliTroskovi;
+    Console.WriteLine($"Stanje u biranom periodu je {Math.Round(vrijednost,2)}kn");
+
+    return;
+}
+static double Earnings(DateTime datum,Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    double sum = 0.0;
+    foreach (var item in Reciepts)
+        if (item.Value.DatumIzdavanja.Subtract(datum).TotalDays < 365 && item.Value.DatumIzdavanja.Month == datum.Month)
+            sum += TotalSum(item.Value.SviProizvodi);
+    return sum;
+}
+static double SoldArticles(Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    double sum = 0.0;
+    foreach (var receipt in Reciepts.Keys)
+        sum += TotalSum(Reciepts[receipt].SviProizvodi);
+    return sum;
+}
+static double UnsoldArticles(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles)
+{
+    double sum = 0.0;
+    foreach (var article in Articles)
+        sum += article.Value.Cijena * article.Value.Kolicina;
+    return sum;
+}
+static (Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> racuni, Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> artikli) InitialPageForReciepts(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    Console.WriteLine("1 - Unos novog racuna\n2 - Ispis racuna\n0 - Povratak na glavni izbornik");
+    var initialNumber = Console.ReadLine();
+    var Artikli = Articles;
+    switch (initialNumber)
+    {
+        case "0":
+            Console.Clear();
+            BeginningPage(Articles, Workers, Reciepts);
+            break;
+        case "1":
+            Console.Clear();
+            int broj;
+            DateTime datum;
+            Dictionary<string, double> rjecnik = new Dictionary<string, double>();
+            (broj, datum, rjecnik, Artikli)=AddingReciepts(Articles, Workers, Reciepts);
+            Reciepts.Add(broj, (datum, rjecnik));
+            OneReceipt(broj, Articles, Reciepts);
+            Console.ReadKey();
+            return (Reciepts,Artikli);
+        case "2":
+            Console.Clear();
+            ListingOutTheReciepts(MakingAListOfAllID(Reciepts), Reciepts, Articles);
+            Console.WriteLine("Ako želis ispisat sve podatke odredenog računa id tog računa.");
+            var id = GettingTheNumber("id");
+            if (Reciepts.ContainsKey(id))
+            {
+                OneReceipt(id,Articles, Reciepts);
+                Console.ReadKey();
+            }
+            break;
+        default:
+            Console.Clear();
+            Console.WriteLine("Upisani broj nije jedan od ponudenih. Pokusajte ponovno.");
+            InitialPageForWorkers(Articles, Workers, Reciepts);
+            break;
+    }
+    return (Reciepts, Artikli);
+}
+static void OneReceipt(int broj, Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles,Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    Console.WriteLine($"{broj} - {Reciepts[broj].DatumIzdavanja.ToString()}");
+    foreach (var s in Reciepts[broj].SviProizvodi)
+        Console.WriteLine($"{s.Key} - {s.Value / Articles[s.Key].Cijena}");
+    Console.WriteLine(TotalSum(Reciepts[broj].SviProizvodi));
+}
+static void ListingOutTheReciepts(List<int> brojevi, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Receipts, Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles)
+{
+    foreach (var br in brojevi)
+        Console.WriteLine($"{br} - {Receipts[br].DatumIzdavanja} - {TotalSum(Receipts[br].SviProizvodi)}");
+    return;
+}
+static double TotalSum(Dictionary<string, double> Proizvodi)
+{
+    var suma = 0.0;
+    foreach (var s in Proizvodi)
+        suma += s.Value;
+    return suma;
+}
+static (int broj, DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi, Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> artikli) AddingReciepts(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    Console.WriteLine("Lista svih proizvoda u ducanu:");
+    foreach(var item in Articles.Keys)
+            Console.WriteLine(item);
+
+    Console.WriteLine("Unesite proizvode koje zelite kupiti, kada dovrsite unos upisite rijec DA");
+    var articlesAndAmounts = ItemsOnReciept(MakeArticleList(Articles));
+
+    Console.Clear();
+    Console.WriteLine("Na računu su sljedeći proizvodi:");
+    foreach (var item in articlesAndAmounts)
+        Console.WriteLine($"{item.Key} {item.Value}");
+
+    Console.WriteLine("Jeste li sigurni da želite dodati račun s ovim proizvodima\nunesite DA ako želite nastaviti");
+    if (Console.ReadLine().Trim().ToLower() == "da")
+    {
+        var id = LastID(MakingAListOfAllID(Reciepts));
+        var kupljeni = new Dictionary<string, double>();
+        foreach (var item in articlesAndAmounts)
+        {
+            kupljeni.Add(item.Key, item.Value * Articles[item.Key].Cijena);
+            var temp1 = Articles[item.Key].Cijena;
+            var temp2 = Articles[item.Key].DatumIsteka;
+            var temp3 = Articles[item.Key].Kolicina;
+            Articles.Remove(item.Key);
+            if(temp3-item.Value!=0)
+                Articles.Add(item.Key, (temp3 - item.Value, temp1, temp2));
+
+        }
+        return (id + 1, DateTime.Now, kupljeni, Articles);
+    }
+    return (0, DateTime.Now, new Dictionary<string, double> { { "", 0.0 } }, Articles);
+}
+static Dictionary<string,int> ItemsOnReciept(List<string> lista)
+{
+    var kupljeni = new Dictionary<string, int>();
+    while (true)
+    {
+        var proizvod = GettingTheName("naziv proizvod");
+        if (proizvod.Trim().ToLower() == "da")
+            return kupljeni;
+        if (!lista.Contains(proizvod))
+        {
+            Console.WriteLine("Uneseni proizvod ne postoji u ducanu.");
+        }
+        else if (kupljeni.ContainsKey(proizvod))
+        {
+            Console.WriteLine("Ne možete isti proizvod unjeti dvaput.");
+        }
+        else
+        {
+            int kolicina = GettingTheNumber("količina");
+            kupljeni.Add(proizvod, kolicina);
+        }
+    }
+    return kupljeni;
+}
+static List<int> MakingAListOfAllID(Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
+{
+    var lista = new List<int>();
+    foreach(var item in Reciepts.Keys)
+        lista.Add(item);
+    return lista;
+}
+static int LastID(List<int> lista)
+{
+    int id=0;
+    foreach (var broj in lista)
+        id = broj;
+    return id;
 }
 static Dictionary<string, DateTime> InitialPageForWorkers(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
 {
@@ -273,17 +494,10 @@ static (string ime, DateTime datumRodenja) AddingAWorker(Dictionary<string, (int
     Console.WriteLine("Upišite sve informacije o novom radniku");
     string ime = GettingTheName("ime i prezime radnika");
     var provjera = false;
-    DateTime datumIsteka = new DateTime();
-    do
-    {
-        Console.WriteLine("datum (mora biti u obliku yyyy-mm-dd): ");
-        provjera = DateTime.TryParse(Console.ReadLine(), out datumIsteka);
-    }
-    while (!provjera);
-
-    Console.WriteLine($"Želite li dodati radnika {ime} - {datumIsteka}\n(Ako želite upišite DA)");
+    var datum = GetADate("yyyy-mm-dd");
+    Console.WriteLine($"Želite li dodati radnika {ime} - {datum}\n(Ako želite upišite DA)");
     if (Console.ReadLine().Trim().ToLower() == "da")
-        return (ime, datumIsteka);
+        return (ime, datum);
     return ("", DateTime.Now);
 
 }
@@ -536,14 +750,8 @@ static (string proizvod, int kolicina, double cijena, DateTime datum) AddArticle
         Console.Clear();
         InitialPageForArticles(Articles,Workers,Reciepts);
     }
-    int kolicina;
+    int kolicina = GettingTheNumber("količina");
     var provjera = false;
-    do
-    {
-        Console.WriteLine("količina: ");
-        provjera = int.TryParse(Console.ReadLine(), out kolicina);
-    }
-    while (!provjera);
     double cijena;
     do
     {
@@ -551,14 +759,7 @@ static (string proizvod, int kolicina, double cijena, DateTime datum) AddArticle
         provjera = double.TryParse(Console.ReadLine(), out cijena);
     }
     while (!provjera);
-    DateTime datumIsteka = new DateTime();
-    do
-    {
-        Console.WriteLine("datum (mora biti u obliku yyyy-mm-dd): ");
-        provjera = DateTime.TryParse(Console.ReadLine(), out datumIsteka);
-    }
-    while (!provjera);
-
+    var datumIsteka = GetADate("yyyy-mm-dd");
     Console.WriteLine($"Želite li dodati artikl {proizvod} - {kolicina} - {cijena} - {datumIsteka}\n(Ako želite upišite DA)");
     var odgovor = Console.ReadLine();
     if (odgovor.Trim().ToLower() == "da")
@@ -576,6 +777,42 @@ static string GettingTheName(string rijec)
         proizvod = Console.ReadLine();
     }
     return proizvod;
+}
+static int GettingTheNumber(string rj)
+{
+    int kolicina;
+    var provjera = true;
+    do
+    {
+        Console.WriteLine($"{rj}: ");
+        provjera = int.TryParse(Console.ReadLine(), out kolicina);
+    }
+    while (!provjera && kolicina>0);
+    return kolicina;
+}
+static DateTime GetADate(string ric)
+{
+    var provjera = false;
+    DateTime datum = new DateTime();
+    do
+    {
+        Console.WriteLine($"datum (mora biti u obliku {ric}): ");
+        provjera = DateTime.TryParse(Console.ReadLine(), out datum);
+    }
+    while (!provjera);
+    return datum;
+}
+static double GetADouble(string ric)
+{
+    double kolicina;
+    var provjera = true;
+    do
+    {
+        Console.WriteLine($"{ric}: ");
+        provjera = double.TryParse(Console.ReadLine(), out kolicina);
+    }
+    while (!provjera && kolicina>0);
+    return kolicina;
 }
 static void ArticlesListing(Dictionary<string, (int Kolicina, double Cijena, DateTime DatumIsteka)> Articles, Dictionary<string, DateTime> Workers, Dictionary<int, (DateTime DatumIzdavanja, Dictionary<string, double> SviProizvodi)> Reciepts)
 {
